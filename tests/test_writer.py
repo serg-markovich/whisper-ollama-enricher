@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from unittest.mock import patch
-from pathlib import Path
 
 from src.models import WhisperOutput, OllamaEnrichment, NoteContext
 from src.writer import _render, _filename
