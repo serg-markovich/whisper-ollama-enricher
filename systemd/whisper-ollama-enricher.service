@@ -1,0 +1,13 @@
+[Unit]
+Description=Whisper Ollama Enricher
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/whisper-ollama-enricher/.env
+ExecStart=__VENV__/bin/python __PROJECT_DIR__/bin/run.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

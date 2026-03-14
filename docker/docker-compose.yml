@@ -1,0 +1,10 @@
+services:
+  enricher:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file: .env
+    user: "${CURRENT_UID}:${CURRENT_GID}"
+    volumes:
+      - ${VAULT_PATH}:/vault:rw
+    restart: unless-stopped
