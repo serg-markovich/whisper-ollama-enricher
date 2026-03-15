@@ -41,8 +41,8 @@ vault/0_inbox/*.md   ← JSON transcript from local-whisper-obsidian
   source .md deleted after successful write
 ```
 
-If Ollama is unreachable, the note is written without enrichment
-(title = filename, no tags or summary). No data is lost.
+If Ollama is unreachable, the file is moved to .retry/ queue
+and reprocessed automatically when the service recovers. No data is lost.
 
 ## System Requirements
 
@@ -159,11 +159,11 @@ No vendor lock-in. Point `OUTPUT_PATH` at any folder your PKM tool watches.
 - Output: `0_inbox/records_transcribed/`
 - Model: `mistral`
 
-## Part of eigenstack
+## Eigenstack
 
-This project is part of [eigenstack](https://github.com/serg-markovich/eigenstack)
-— a personal, privacy-first AI infrastructure concept: local LLMs, self-hosted
-services, no cloud dependencies.
+This project is built around the [eigenstack](https://github.com/serg-markovich/eigenstack)
+philosophy — privacy-first, local-first infrastructure where every service
+runs on your own hardware, no cloud dependencies, no vendor lock-in.
 
 **Related projects:**
 - [eigenstack](https://github.com/serg-markovich/eigenstack) — architecture overview
