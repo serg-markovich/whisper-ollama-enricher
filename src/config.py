@@ -29,6 +29,8 @@ OUTPUT_PATH = Path(os.getenv("OUTPUT_PATH") or str(VAULT_PATH / "1_enriched"))
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL", "mistral")
 OLLAMA_TIMEOUT  = int(os.getenv("OLLAMA_TIMEOUT", "60"))
+RETRY_INTERVAL: int = int(os.getenv("RETRY_INTERVAL", "30"))
+OLLAMA_SYSTEM_PROMPT: str = os.getenv("OLLAMA_SYSTEM_PROMPT", "")
 
 OBSIDIAN_REST_URL = os.getenv("OBSIDIAN_REST_URL", "http://127.0.0.1:27124")
 OBSIDIAN_API_KEY  = os.getenv("OBSIDIAN_API_KEY", "")

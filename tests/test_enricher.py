@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock
+import pytest
 import httpx
 
 from src.models import WhisperOutput
-from src.enricher import enrich
+from src.enricher import enrich, OllamaUnavailableError
 
 
 def _whisper():
@@ -22,7 +23,8 @@ def test_returns_none_when_ollama_unavailable():
         mock_client.return_value.__enter__.return_value.post.side_effect = (
             httpx.ConnectError("refused")
         )
-        assert enrich(_whisper()) is None
+        with pytest.raises(OllamaUnavailableError):
+            enrich(_whisper())
 
 
 def test_returns_none_on_bad_json():

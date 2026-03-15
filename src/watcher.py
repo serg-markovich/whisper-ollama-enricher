@@ -1,5 +1,7 @@
 from __future__ import annotations
 import logging
+import shutil
+import threading
 import time
 from pathlib import Path
 
@@ -7,13 +9,14 @@ from pydantic import ValidationError
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileCreatedEvent
 
-from .config import INBOX_PATH
+from .config import INBOX_PATH, RETRY_INTERVAL
 from .models import WhisperOutput, NoteContext
-from .enricher import enrich
+from .enricher import enrich, OllamaUnavailableError
 from .writer import write_note
 
 log = logging.getLogger(__name__)
 _PROCESSING: set[str] = set()
+RETRY_PATH = INBOX_PATH / ".retry"
 
 
 def _wait_for_stable(path: Path, interval: float = 0.5, rounds: int = 6) -> bool:
@@ -53,9 +56,16 @@ def _process(path: Path) -> None:
             return
 
         ctx = NoteContext(whisper=whisper, source_md_path=str(path))
-        ctx.enrichment = enrich(whisper)
-        dest = write_note(ctx)
 
+        try:
+            ctx.enrichment = enrich(whisper)
+        except OllamaUnavailableError as exc:
+            log.warning("%s — moving to retry queue", exc)
+            RETRY_PATH.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(path), RETRY_PATH / path.name)
+            return
+
+        dest = write_note(ctx)
         path.unlink()
         log.info("✓ %s → %s (source deleted)", path.name, dest)
 
@@ -63,6 +73,22 @@ def _process(path: Path) -> None:
         log.error("Failed to process %s: %s", path.name, exc)
     finally:
         _PROCESSING.discard(key)
+
+
+def _retry_worker() -> None:
+    """Background thread: retry queued files every RETRY_INTERVAL seconds."""
+    while True:
+        time.sleep(RETRY_INTERVAL)
+        if not RETRY_PATH.exists():
+            continue
+        queued = list(RETRY_PATH.glob("*.md"))
+        if not queued:
+            continue
+        log.info("Retry queue: %d file(s) pending", len(queued))
+        for f in queued:
+            dest = INBOX_PATH / f.name
+            shutil.move(str(f), dest)
+            _process(dest)
 
 
 class _InboxHandler(FileSystemEventHandler):
@@ -76,6 +102,11 @@ def run() -> None:
     if not INBOX_PATH.exists():
         raise SystemExit(f"INBOX_PATH does not exist: {INBOX_PATH}")
     log.info("Watching %s ...", INBOX_PATH)
+
+    retry_thread = threading.Thread(target=_retry_worker, daemon=True)
+    retry_thread.start()
+    log.info("Retry worker started (interval: %ds)", RETRY_INTERVAL)
+
     observer = Observer()
     observer.schedule(_InboxHandler(), str(INBOX_PATH), recursive=False)
     observer.start()

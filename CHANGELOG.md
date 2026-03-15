@@ -3,12 +3,23 @@
 All notable changes documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.3.0] - 2026-03-15
 
-### Planned
-- Retry queue for failed enrichments
-- Prompt editor via .env (v0.3.0)
-- Multi-inbox support with per-inbox templates (v0.3.0)
+### Added
+- Retry queue: files are moved to `.retry/` when Ollama is unreachable,
+  reprocessed automatically every 30 seconds (configurable via `RETRY_INTERVAL`)
+- Custom system prompt via `OLLAMA_SYSTEM_PROMPT` env var —
+  accepts file path or inline string
+
+### Changed
+- `OllamaUnavailableError` now raised explicitly on ConnectError
+  instead of silently returning `None`
+
+### Fixed
+- Docker section in README: added CURRENT_UID/GID documentation
+- README: removed speculative Nextcloud/WebDAV from architecture diagram
+- Added System Requirements table and minimum viable setup note
+
 
 ## [0.2.0] - 2026-03-15
 
