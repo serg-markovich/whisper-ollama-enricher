@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>whisper-ollama-enricher</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__VENV__/bin/python</string>
+        <string>__PROJECT_DIR__/bin/run.py</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>ENV_FILE</key>
+        <string>__CONFIG_DIR__/.env</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/whisper-ollama-enricher.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/whisper-ollama-enricher.err</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>
