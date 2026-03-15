@@ -6,9 +6,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Planned
-- macOS support via launchd (replaces systemd in Makefile)
-- `make logs` via `log stream` on macOS
-- CI matrix: ubuntu-22.04 + macos-13
+- Retry queue for failed enrichments
+- Prompt editor via .env (v0.3.0)
+- Multi-inbox support with per-inbox templates (v0.3.0)
+
+## [0.2.0] - 2026-03-15
+
+### Added
+- macOS support via launchd (`launchd/whisper-ollama-enricher.plist`)
+- `make install/start/stop/restart/status/logs` auto-detect OS (Linux/macOS)
+- CI matrix: ubuntu-22.04 + macos-latest
+- `docs/MACOS.md` — launchd setup, known limitations, troubleshooting
+- Docker tested end-to-end with vault mount and Ollama on host
+
+### Fixed
+- CI: use `macos-latest` instead of deprecated `macos-13-us-default`
 
 ## [0.1.0] - 2026-03-14
 

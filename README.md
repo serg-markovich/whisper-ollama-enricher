@@ -8,9 +8,9 @@ Watches an Obsidian inbox for voice transcripts, enriches them via local Ollama,
 
 Part of [eigenstack](https://github.com/serg-markovich/eigenstack) — a privacy-first local AI stack.
 
-> **Platform support:** Developed and tested on Ubuntu 24.04.
-> macOS support (launchd) is planned for v0.2.0.
+> **Platform support:** Linux (systemd) and macOS (launchd).
 > Docker deployment works on any platform.
+> 🍎 **macOS users:** see [docs/MACOS.md](docs/MACOS.md) for setup instructions and known limitations.
 
 ## Quick Start
 
@@ -41,7 +41,7 @@ vault/0_inbox/*.md   ← JSON transcript from local-whisper-obsidian
 ## Requirements
 
 - Python 3.11+
-- Ubuntu 22.04+ (macOS planned for v0.2.0)
+- Linux (Ubuntu 22.04+) or macOS 13+
 - [Ollama](https://ollama.com) running locally — any setup works:
   - native install (`ollama serve`)
   - via [openwebui-systemd-stack](https://github.com/serg-markovich/openwebui-systemd-stack) on Linux
@@ -91,18 +91,18 @@ templates (Default, Zettelkasten, GTD, Minimal).
 
 ## Commands
 
-| Command            | Description                        |
-|--------------------|------------------------------------|
-| `make install`     | venv + systemd user service        |
-| `make start`       | start service                      |
-| `make stop`        | stop service                       |
-| `make restart`     | restart after config changes       |
-| `make status`      | service status                     |
-| `make logs`        | live logs via journalctl           |
-| `make test`        | run tests                          |
-| `make lint`        | ruff check                         |
-| `make docker-up`   | start via docker compose           |
-| `make docker-down` | stop docker compose                |
+| Command            | Description                              |
+|--------------------|------------------------------------------|
+| `make install`     | venv + systemd (Linux) / launchd (macOS) |
+| `make start`       | start service                            |
+| `make stop`        | stop service                             |
+| `make restart`     | restart after config changes             |
+| `make status`      | service status                           |
+| `make logs`        | live logs                                |
+| `make test`        | run tests                                |
+| `make lint`        | ruff check                               |
+| `make docker-up`   | start via docker compose                 |
+| `make docker-down` | stop docker compose                      |
 
 ## Docker (NAS / headless)
 
