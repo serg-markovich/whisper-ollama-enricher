@@ -7,7 +7,6 @@ from unittest.mock import patch
 import pytest
 
 from src.enricher import OllamaUnavailableError
-from src.models import WhisperOutput
 
 
 SAMPLE_WHISPER = {
