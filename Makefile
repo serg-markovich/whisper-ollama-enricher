@@ -83,6 +83,10 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -delete
 
+verify: lint test
+	@git ls-files --error-unmatch .env 2>/dev/null && echo "FATAL: .env is tracked" && exit 1 || true
+	@echo "✓ All checks passed"
+
 docker-build:
 	docker compose -f docker/docker-compose.yml build
 

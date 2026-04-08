@@ -93,7 +93,7 @@ def write_note(ctx: NoteContext) -> Path:
 
 def _write_via_rest(filename: str, content: str) -> Path:
     url = f"{OBSIDIAN_REST_URL}/vault/{filename}"
-    with httpx.Client(timeout=10, verify=False) as client:
+    with httpx.Client(timeout=10) as client:
         r = client.put(
             url,
             content=content.encode(),

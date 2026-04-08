@@ -18,7 +18,7 @@ def _whisper():
     )
 
 
-def test_returns_none_when_ollama_unavailable():
+def test_raises_when_ollama_unavailable():
     with patch("src.enricher.httpx.Client") as mock_client:
         mock_client.return_value.__enter__.return_value.post.side_effect = (
             httpx.ConnectError("refused")

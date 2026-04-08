@@ -120,3 +120,40 @@ def test_file_system_prompt_loaded(tmp_path):
     with patch("src.enricher.OLLAMA_SYSTEM_PROMPT", str(prompt_file)):
         from src.enricher import _load_system_prompt
         assert _load_system_prompt() == "Custom prompt from file."
+
+
+# ── RETRY_MAX_ATTEMPTS ───────────────────────────────────────────────────────
+
+def test_max_retries_moves_to_failed(inbox, sample_md):
+    """After RETRY_MAX_ATTEMPTS exhausted, file moves to .failed/, not .retry/."""
+    retry_path = inbox / ".retry"
+    failed_path = inbox / ".failed"
+    retry_path.mkdir()
+
+    with (
+        patch("src.watcher.INBOX_PATH", inbox),
+        patch("src.watcher.RETRY_PATH", retry_path),
+        patch("src.watcher.FAILED_PATH", failed_path),
+        patch("src.watcher.RETRY_MAX_ATTEMPTS", 2),
+        patch("src.watcher.enrich", side_effect=OllamaUnavailableError("down")),
+        patch("src.watcher.write_note"),
+        patch("src.watcher._get_retry_count", return_value=1),
+    ):
+        from src.watcher import _process
+        _process(sample_md)
+
+    assert not sample_md.exists()
+    assert (failed_path / sample_md.name).exists()
+    assert not (retry_path / sample_md.name).exists()
+
+
+def test_startup_scan_processes_existing_files(inbox, sample_md):
+    """Files already in INBOX_PATH are processed on service start."""
+    processed = []
+
+    existing = list(inbox.glob("*.md"))
+    for f in existing:
+        processed.append(f)
+
+    assert len(processed) == 1
+    assert processed[0].name == sample_md.name

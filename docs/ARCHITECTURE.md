@@ -92,7 +92,7 @@ Obsidian graph linking, where consistent language matters.
 | `INBOX_PATH` or `VAULT_PATH` not set | `_require()` exits immediately with actionable message |
 | File written while still being copied | `_wait_for_stable()` polls size until stable |
 | Same file triggered twice | `_PROCESSING` in-memory set guards against re-entry |
-| Ollama unavailable | `enrich()` returns `None`, note written without enrichment |
+| Ollama unavailable | `OllamaUnavailableError` raised → file moved to `.retry/`, note NOT written |
 | Ollama returns invalid JSON | caught by `except Exception`, same fallback |
 | Obsidian REST API unavailable | falls back to direct file write |
 | Output path does not exist | `OUTPUT_PATH.mkdir(parents=True, exist_ok=True)` |

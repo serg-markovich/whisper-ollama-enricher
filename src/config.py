@@ -30,6 +30,20 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL", "mistral")
 OLLAMA_TIMEOUT  = int(os.getenv("OLLAMA_TIMEOUT", "60"))
 RETRY_INTERVAL: int = int(os.getenv("RETRY_INTERVAL", "30"))
+
+def _require_positive_int(key: str, default: int) -> int:
+    val = os.getenv(key, str(default)).strip()
+    try:
+        n = int(val)
+        if n < 1:
+            raise ValueError
+        return n
+    except ValueError:
+        raise SystemExit(
+            f"\n[whisper-ollama-enricher] FATAL: '{key}' must be a positive integer, got: {val!r}\n"
+        )
+
+RETRY_MAX_ATTEMPTS: int = _require_positive_int("RETRY_MAX_ATTEMPTS", 5)
 OLLAMA_SYSTEM_PROMPT: str = os.getenv("OLLAMA_SYSTEM_PROMPT", "")
 
 OBSIDIAN_REST_URL = os.getenv("OBSIDIAN_REST_URL", "http://127.0.0.1:27124")

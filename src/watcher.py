@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileCreatedEvent
 
-from .config import INBOX_PATH, RETRY_INTERVAL
+from .config import INBOX_PATH, RETRY_INTERVAL, RETRY_MAX_ATTEMPTS
 from .models import WhisperOutput, NoteContext
 from .enricher import enrich, OllamaUnavailableError
 from .writer import write_note
@@ -17,6 +17,32 @@ from .writer import write_note
 log = logging.getLogger(__name__)
 _PROCESSING: set[str] = set()
 RETRY_PATH = INBOX_PATH / ".retry"
+FAILED_PATH = INBOX_PATH / ".failed"
+
+
+def _counter_file(path: Path) -> Path:
+    return RETRY_PATH / (path.name + ".count")
+
+
+def _get_retry_count(path: Path) -> int:
+    cf = _counter_file(path)
+    try:
+        return int(cf.read_text())
+    except (FileNotFoundError, ValueError):
+        return 0
+
+
+def _increment_retry_count(path: Path) -> int:
+    RETRY_PATH.mkdir(parents=True, exist_ok=True)
+    count = _get_retry_count(path) + 1
+    _counter_file(path).write_text(str(count))
+    return count
+
+
+def _clear_retry_count(path: Path) -> None:
+    cf = _counter_file(path)
+    if cf.exists():
+        cf.unlink()
 
 
 def _wait_for_stable(path: Path, interval: float = 0.5, rounds: int = 6) -> bool:
@@ -60,13 +86,27 @@ def _process(path: Path) -> None:
         try:
             ctx.enrichment = enrich(whisper)
         except OllamaUnavailableError as exc:
-            log.warning("%s — moving to retry queue", exc)
-            RETRY_PATH.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(path), RETRY_PATH / path.name)
+            retry_count = _increment_retry_count(path)
+            if retry_count >= RETRY_MAX_ATTEMPTS:
+                log.error(
+                    "Max retries (%d) exceeded for %s — moving to .failed/",
+                    RETRY_MAX_ATTEMPTS, path.name,
+                )
+                FAILED_PATH.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(path), FAILED_PATH / path.name)
+                _clear_retry_count(path)
+            else:
+                log.warning(
+                    "%s — retry queue (attempt %d/%d)",
+                    exc, retry_count, RETRY_MAX_ATTEMPTS,
+                )
+                RETRY_PATH.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(path), RETRY_PATH / path.name)
             return
 
         dest = write_note(ctx)
         path.unlink()
+        _clear_retry_count(path)
         log.info("✓ %s → %s (source deleted)", path.name, dest)
 
     except Exception as exc:
@@ -76,7 +116,6 @@ def _process(path: Path) -> None:
 
 
 def _retry_worker() -> None:
-    """Background thread: retry queued files every RETRY_INTERVAL seconds."""
     while True:
         time.sleep(RETRY_INTERVAL)
         if not RETRY_PATH.exists():
@@ -101,6 +140,22 @@ class _InboxHandler(FileSystemEventHandler):
 def run() -> None:
     if not INBOX_PATH.exists():
         raise SystemExit(f"INBOX_PATH does not exist: {INBOX_PATH}")
+
+    existing = list(INBOX_PATH.glob("*.md"))
+    if existing:
+        log.info("Startup scan: %d file(s) in inbox", len(existing))
+        for f in existing:
+            _process(f)
+
+    if RETRY_PATH.exists():
+        queued = list(RETRY_PATH.glob("*.md"))
+        if queued:
+            log.info("Startup scan: %d file(s) in retry queue", len(queued))
+            for f in queued:
+                dest = INBOX_PATH / f.name
+                shutil.move(str(f), dest)
+                _process(dest)
+
     log.info("Watching %s ...", INBOX_PATH)
 
     retry_thread = threading.Thread(target=_retry_worker, daemon=True)

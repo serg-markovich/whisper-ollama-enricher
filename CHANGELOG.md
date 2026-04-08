@@ -1,3 +1,18 @@
+## [0.4.0] - 2026-04-08
+
+### Added
+- Startup scan on service init: processes `.md` files already in `INBOX_PATH`
+  and `.retry/` that arrived while the service was offline
+- `RETRY_MAX_ATTEMPTS` — moves files to `.failed/` after N failed attempts (default: 5)
+- End-to-end integration test for full pipeline
+
+### Fixed
+- `ARCHITECTURE.md`: corrected Ollama failure mode — file moves to `.retry/`,
+  note without enrichment is NOT written
+- `docker/.env.example`: typo `0inbox` → `0_inbox`, added missing env vars
+- `src/writer.py`: removed unnecessary `verify=False` in Obsidian REST client
+- Retry counter sidecar stored in `.retry/` by filename, survives file moves
+
 # Changelog
 
 All notable changes documented here.
