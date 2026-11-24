@@ -3,6 +3,19 @@
 All notable changes documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.5.1] - 2026-11-24
+
+### Fixed
+- Obsidian REST writes now honor `OUTPUT_PATH` (vault-relative, URL-encoded) instead of
+  always writing to the vault root; falls back to direct write if `OUTPUT_PATH` is
+  outside `VAULT_PATH`
+- Ollama timeouts and HTTP 5xx now enter the retry queue; HTTP 4xx stays permanent
+  (note written without enrichment) to avoid burning retry attempts on a bad model name
+- `_write_via_rest()` returns the real output path instead of a bare filename
+
+### Changed
+- `requirements.txt` pinned to the exact versions covered by CI
+
 ## [0.5.0] - 2026-11-24
 
 ### Added

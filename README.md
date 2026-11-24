@@ -1,6 +1,6 @@
 # whisper-ollama-enricher
 
-**Status:** `PROTOTYPE` — pipeline and deployment artifacts work and are tested; remaining gaps are REST output path, retry-on-timeout semantics, and dependency pinning. Watches a folder for voice transcripts, enriches them with a local Ollama model, writes structured Markdown notes into an Obsidian-compatible vault. Local-only, no cloud, no API keys required.
+**Status:** `PROTOTYPE` — pipeline and deployment artifacts work and are tested; remaining gaps are filename collisions, single-instance locking, and Docker hardening. Watches a folder for voice transcripts, enriches them with a local Ollama model, writes structured Markdown notes into an Obsidian-compatible vault. Local-only, no cloud, no API keys required.
 
 ## Overview
 
@@ -71,18 +71,19 @@ Output is plain `.md` + YAML frontmatter — works with Obsidian, Logseq, Foam, 
 **Working**
 - Startup scan of inbox and `.retry/` queue; stability polling; duplicate-processing guard.
 - Ollama JSON enrichment with per-language title/summary and English tags.
-- Direct file write fallback; retry counter sidecars; `.failed/` quarantine.
-- One-shot mode (`--once`, `make once`) for cron/systemd timers.
-- systemd unit, Docker env template, launchd install; 30 pytest tests + ruff CI.
+- REST and direct writes both target `OUTPUT_PATH`; retry on transport errors/timeouts/5xx.
+- Retry counter sidecars; `.failed/` quarantine; one-shot mode (`--once`, `make once`).
+- systemd unit, Docker env template, launchd install; 37 pytest tests + ruff CI.
 
 **Broken / Incomplete**
-- Obsidian REST mode writes to vault root, ignoring `OUTPUT_PATH`; unenriched notes written on non-connect Ollama errors.
-- Non-connect Ollama failures (timeout/5xx/invalid JSON) are not retried; duplicate `date + title` filenames overwrite silently.
-- Dependencies unpinned, no lockfile; no multi-process locking; local Python 3.14 untested (CI targets 3.11).
+- Duplicate `date + title` filenames overwrite silently; no multi-process locking (two instances can race).
+- HTTP 4xx/invalid JSON still produce an unenriched note (logged, not retried by design).
+- Docker image ships dev deps and has no healthcheck; CI does not exercise a real Ollama/Obsidian.
+- Local Python 3.14 untested end-to-end (CI targets 3.11); no GitHub Release automation.
 
 **Next Steps**
-1. Honor `OUTPUT_PATH` in REST mode and add filename collision handling (needs a product decision).
-2. Distinguish retryable Ollama errors (timeout/5xx) from invalid payloads.
-3. Pin dependencies + lockfile; run tests on Python 3.11–3.14.
+1. Add filename collision handling (suffix or slug/ID) and a single-instance guard.
+2. Add Docker healthcheck and split runtime/dev requirements for a slimmer image.
+3. Run tests on Python 3.11–3.14 and publish releases from CI.
 
 License: MIT (see `LICENSE`).

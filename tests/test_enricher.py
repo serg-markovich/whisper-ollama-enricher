@@ -33,3 +33,36 @@ def test_returns_none_on_bad_json():
         mock_resp.json.return_value = {"response": "not valid json {{"}
         mock_client.return_value.__enter__.return_value.post.return_value = mock_resp
         assert enrich(_whisper()) is None
+
+
+def _status_error(status: int) -> httpx.HTTPStatusError:
+    request = httpx.Request("POST", "http://localhost:11434/api/generate")
+    response = httpx.Response(status, request=request)
+    return httpx.HTTPStatusError(f"HTTP {status}", request=request, response=response)
+
+
+def test_raises_when_ollama_times_out():
+    with patch("src.enricher.httpx.Client") as mock_client:
+        mock_client.return_value.__enter__.return_value.post.side_effect = (
+            httpx.ReadTimeout("timed out")
+        )
+        with pytest.raises(OllamaUnavailableError):
+            enrich(_whisper())
+
+
+def test_raises_on_server_error():
+    with patch("src.enricher.httpx.Client") as mock_client:
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = _status_error(503)
+        mock_client.return_value.__enter__.return_value.post.return_value = mock_resp
+        with pytest.raises(OllamaUnavailableError):
+            enrich(_whisper())
+
+
+def test_returns_none_on_client_error():
+    """4xx is permanent (e.g. unknown model) — retrying cannot help."""
+    with patch("src.enricher.httpx.Client") as mock_client:
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = _status_error(404)
+        mock_client.return_value.__enter__.return_value.post.return_value = mock_resp
+        assert enrich(_whisper()) is None

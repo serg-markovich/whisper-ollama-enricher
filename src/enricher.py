@@ -58,8 +58,19 @@ def enrich(whisper: WhisperOutput) -> OllamaEnrichment | None:
             )
             r.raise_for_status()
         return OllamaEnrichment(**json.loads(r.json()["response"]))
-    except httpx.ConnectError:
-        raise OllamaUnavailableError(f"Ollama unreachable at {OLLAMA_BASE_URL}")
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status >= 500:
+            raise OllamaUnavailableError(
+                f"Ollama returned HTTP {status} at {OLLAMA_BASE_URL}"
+            )
+        log.error(
+            "Ollama rejected the request (HTTP %d) — writing note without enrichment",
+            status,
+        )
+        return None
+    except httpx.TransportError as exc:
+        raise OllamaUnavailableError(f"Ollama unreachable at {OLLAMA_BASE_URL}: {exc}")
     except Exception as exc:
         log.warning("Enrichment failed: %s — writing note without enrichment", exc)
         return None

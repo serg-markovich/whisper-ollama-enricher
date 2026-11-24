@@ -68,9 +68,10 @@ See `docs/TEMPLATES.md` for examples.
 ### Obsidian REST API with direct file fallback
 
 Primary write path uses the Obsidian Local REST API plugin (port 27123/27124)
-so Obsidian indexes the note immediately. If the API key is empty or the call
-fails, the enricher writes directly to `OUTPUT_PATH` on disk.
-This makes the tool usable without the plugin installed.
+so Obsidian indexes the note immediately. The request targets `OUTPUT_PATH`
+relative to `VAULT_PATH` (URL-encoded). If the API key is empty, `OUTPUT_PATH`
+lies outside the vault, or the call fails, the enricher writes directly to
+`OUTPUT_PATH` on disk. This makes the tool usable without the plugin installed.
 
 ### Config in ~/.config, not in project root
 
@@ -92,9 +93,11 @@ Obsidian graph linking, where consistent language matters.
 | `INBOX_PATH` or `VAULT_PATH` not set | `_require()` exits immediately with actionable message |
 | File written while still being copied | `_wait_for_stable()` polls size until stable |
 | Same file triggered twice | `_PROCESSING` in-memory set guards against re-entry |
-| Ollama unavailable | `OllamaUnavailableError` raised → file moved to `.retry/`, note NOT written |
-| Ollama returns invalid JSON | caught by `except Exception`, same fallback |
-| Obsidian REST API unavailable | falls back to direct file write |
+| Ollama unavailable (connect/transport error) | `OllamaUnavailableError` raised → file moved to `.retry/`, note NOT written |
+| Ollama timeout / HTTP 5xx | same retry path as unavailable |
+| Ollama HTTP 4xx (bad model, bad request) | permanent — note written without enrichment, not retried |
+| Ollama returns invalid JSON | caught by `except Exception` → note written without enrichment |
+| Obsidian REST API unavailable / `OUTPUT_PATH` outside vault | falls back to direct file write |
 | Output path does not exist | `OUTPUT_PATH.mkdir(parents=True, exist_ok=True)` |
 | Source file is a regular note, not whisper JSON | skipped silently at DEBUG level |
 

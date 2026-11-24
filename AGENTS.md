@@ -16,8 +16,8 @@
 - `src/config.py` — all env parsing at import time; `_require()` exits on missing required vars; exports `CONFIG_DIR`.
 - `src/models.py` — Pydantic contracts: `WhisperOutput` (inbox JSON), `OllamaEnrichment` (LLM output), `NoteContext` (derived date/duration props).
 - `src/watcher.py` — watchdog observer, filtering, retry/failed queue, orchestration; owns all file moves/deletes.
-- `src/enricher.py` — single Ollama `/api/generate` call; raises `OllamaUnavailableError` only on `httpx.ConnectError`.
-- `src/writer.py` — template rendering, filename generation, Obsidian REST or direct write; no config/IO logic elsewhere.
+- `src/enricher.py` — single Ollama `/api/generate` call; transport errors/timeouts/HTTP 5xx raise `OllamaUnavailableError` (retry), HTTP 4xx and bad payloads return `None` (unenriched note).
+- `src/writer.py` — template rendering, filename generation, Obsidian REST (vault-relative `OUTPUT_PATH`, URL-encoded) or direct write; no config/IO logic elsewhere.
 
 ## Coding Conventions & Guardrails
 - Start every `src` module with `from __future__ import annotations`; use module-level `log = logging.getLogger(__name__)`.

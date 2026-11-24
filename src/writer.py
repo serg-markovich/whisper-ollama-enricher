@@ -1,9 +1,16 @@
 from __future__ import annotations
 import logging
 from pathlib import Path
+from urllib.parse import quote
 import httpx
 
-from .config import OBSIDIAN_REST_URL, OBSIDIAN_API_KEY, OUTPUT_PATH, CONFIG_DIR
+from .config import (
+    OBSIDIAN_REST_URL,
+    OBSIDIAN_API_KEY,
+    OUTPUT_PATH,
+    VAULT_PATH,
+    CONFIG_DIR,
+)
 from .models import NoteContext
 
 log = logging.getLogger(__name__)
@@ -86,13 +93,25 @@ def write_note(ctx: NoteContext) -> Path:
         try:
             return _write_via_rest(filename, content)
         except Exception as exc:
-            log.warning("Obsidian REST API failed (%s) — falling back to direct write", exc)
+            log.warning("Obsidian REST API unavailable (%s) — falling back to direct write", exc)
 
     return _write_direct(filename, content)
 
 
+def _rest_relpath(filename: str) -> str | None:
+    """URL-encoded vault-relative path for OUTPUT_PATH, or None if outside the vault."""
+    try:
+        rel = OUTPUT_PATH.resolve().relative_to(VAULT_PATH.resolve())
+    except ValueError:
+        return None
+    return "/".join(quote(part, safe="") for part in (*rel.parts, filename))
+
+
 def _write_via_rest(filename: str, content: str) -> Path:
-    url = f"{OBSIDIAN_REST_URL}/vault/{filename}"
+    rel = _rest_relpath(filename)
+    if rel is None:
+        raise ValueError(f"OUTPUT_PATH {OUTPUT_PATH} is outside VAULT_PATH {VAULT_PATH}")
+    url = f"{OBSIDIAN_REST_URL}/vault/{rel}"
     with httpx.Client(timeout=10) as client:
         r = client.put(
             url,
@@ -103,8 +122,9 @@ def _write_via_rest(filename: str, content: str) -> Path:
             },
         )
         r.raise_for_status()
-    log.info("Written via Obsidian REST API → %s", filename)
-    return Path(filename)
+    dest = OUTPUT_PATH / filename
+    log.info("Written via Obsidian REST API → %s", dest)
+    return dest
 
 
 def _write_direct(filename: str, content: str) -> Path:
