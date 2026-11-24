@@ -19,7 +19,7 @@ install:
 	@echo "→ Template: $(TEMPLATE) (edit to override default)"
 	python3 -m venv $(VENV)
 	$(PIP) install --upgrade pip -q
-	$(PIP) install -r requirements.txt -q
+	$(PIP) install -r requirements-dev.txt -q
 ifeq ($(UNAME), Darwin)
 	@mkdir -p $(HOME)/Library/LaunchAgents
 	@sed "s|__VENV__|$(VENV)|g; s|__PROJECT_DIR__|$(PWD)|g; s|__CONFIG_DIR__|$(CONFIG_DIR)|g" \

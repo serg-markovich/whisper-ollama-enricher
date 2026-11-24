@@ -85,9 +85,24 @@ def _filename(ctx: NoteContext) -> str:
     return f"{ctx.date_str} {safe[:60]}.md"
 
 
+def _unique_dest(filename: str) -> Path:
+    """Avoid overwriting an existing note: `name.md` → `name (2).md`, `name (3).md`, ..."""
+    dest = OUTPUT_PATH / filename
+    if not dest.exists():
+        return dest
+    stem, suffix = dest.stem, dest.suffix
+    n = 2
+    while True:
+        candidate = OUTPUT_PATH / f"{stem} ({n}){suffix}"
+        if not candidate.exists():
+            return candidate
+        n += 1
+
+
 def write_note(ctx: NoteContext) -> Path:
     content  = _render(ctx)
-    filename = _filename(ctx)
+    dest = _unique_dest(_filename(ctx))
+    filename = dest.name
 
     if OBSIDIAN_API_KEY:
         try:

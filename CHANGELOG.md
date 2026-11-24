@@ -3,6 +3,21 @@
 All notable changes documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.6.0] - 2026-11-24
+
+### Added
+- Filename collision handling: an existing `date + title` note is kept, the new one
+  becomes `... (2).md`, `(3)`, ...
+- Single-instance lock (`INBOX_PATH/.enricher.lock`, `flock`): a second `run`/`--once`
+  exits with a clear error instead of racing the first one
+- Docker `HEALTHCHECK` (inbox mount exists and is writable)
+- CI matrix: Python 3.11–3.14 on Ubuntu + macOS
+
+### Changed
+- Runtime deps split into `requirements.txt`; `pytest`/`ruff` moved to
+  `requirements-dev.txt` (`make install` still installs dev deps)
+- Docker image installs runtime deps only and copies just `src/`, `bin/`, `requirements.txt`
+
 ## [0.5.1] - 2026-11-24
 
 ### Fixed

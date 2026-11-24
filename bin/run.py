@@ -20,7 +20,8 @@ def main() -> None:
     args = parser.parse_args()
 
     # Imported after argparse so `--help` works without a configured .env.
-    from src.config import LOG_LEVEL
+    from src.config import INBOX_PATH, LOG_LEVEL
+    from src.lock import AlreadyRunningError, acquire_lock
     from src.watcher import process_once, run
 
     logging.basicConfig(
@@ -29,10 +30,21 @@ def main() -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    if args.once:
-        process_once()
-    else:
-        run()
+    if not INBOX_PATH.exists():
+        raise SystemExit(f"INBOX_PATH does not exist: {INBOX_PATH}")
+
+    try:
+        lock = acquire_lock(INBOX_PATH)
+    except AlreadyRunningError as exc:
+        raise SystemExit(f"[whisper-ollama-enricher] FATAL: {exc}")
+
+    try:
+        if args.once:
+            process_once()
+        else:
+            run()
+    finally:
+        lock.close()
 
 
 if __name__ == "__main__":

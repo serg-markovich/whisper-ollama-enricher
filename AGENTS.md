@@ -1,8 +1,8 @@
 # AGENTS.md
 
 ## Tech Stack
-- Python 3.11 (CI target; local interpreter may differ). No packaging metadata (`pyproject.toml` absent).
-- Runtime deps: `httpx`, `pydantic>=2.5`, `python-dotenv`, `watchdog`. Dev: `pytest`, `ruff` (same `requirements.txt`).
+- Python 3.11–3.14 (CI matrix); no packaging metadata (`pyproject.toml` absent).
+- Runtime deps pinned in `requirements.txt`; `pytest`/`ruff` pinned in `requirements-dev.txt` (superset, used by `make install`/CI).
 - Plain modules: `src/*.py` pipeline + `bin/run.py` entrypoint; no framework, no async, no DB.
 
 ## Commands
@@ -16,8 +16,9 @@
 - `src/config.py` — all env parsing at import time; `_require()` exits on missing required vars; exports `CONFIG_DIR`.
 - `src/models.py` — Pydantic contracts: `WhisperOutput` (inbox JSON), `OllamaEnrichment` (LLM output), `NoteContext` (derived date/duration props).
 - `src/watcher.py` — watchdog observer, filtering, retry/failed queue, orchestration; owns all file moves/deletes.
+- `src/lock.py` — single-instance `flock` on `INBOX_PATH/.enricher.lock`; acquired in `bin/run.py` for both modes.
 - `src/enricher.py` — single Ollama `/api/generate` call; transport errors/timeouts/HTTP 5xx raise `OllamaUnavailableError` (retry), HTTP 4xx and bad payloads return `None` (unenriched note).
-- `src/writer.py` — template rendering, filename generation, Obsidian REST (vault-relative `OUTPUT_PATH`, URL-encoded) or direct write; no config/IO logic elsewhere.
+- `src/writer.py` — template rendering, collision-safe filenames (`... (2).md`), Obsidian REST (vault-relative `OUTPUT_PATH`, URL-encoded) or direct write; no config/IO logic elsewhere.
 
 ## Coding Conventions & Guardrails
 - Start every `src` module with `from __future__ import annotations`; use module-level `log = logging.getLogger(__name__)`.
@@ -25,6 +26,8 @@
 - Errors: fail fast with `SystemExit` + actionable message for config; per-file failures log and continue (never crash the observer loop).
 - Keep the source `.md` deletion strictly after `write_note()` succeeds; preserve retry semantics (`.retry/` + `.retry/*.count` sidecar, `.failed/` after max attempts).
 - `run()` (watcher) and `process_once()` (`--once`) must share `_startup_scan()`; retry loop must stay in `_retry_pass()` so it is unit-testable.
+- Never remove or bypass the instance lock in `bin/run.py`; tests touching `run()`/`process_once()` must keep `INBOX_PATH` on `tmp_path`.
+- Existing notes must never be overwritten: route new files through `_unique_dest()` (`... (2).md`).
 - Whisper input is detected by JSON content + Pydantic validation, not filename. Do not add filename-pattern filtering.
 - Do not write to the vault, inbox, or real config paths from tests; use `tmp_path` and mocks.
 - Update `CHANGELOG.md` and `README.md` config table when adding env vars or targets.

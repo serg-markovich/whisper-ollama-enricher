@@ -1,6 +1,6 @@
 # whisper-ollama-enricher
 
-**Status:** `PROTOTYPE` — pipeline and deployment artifacts work and are tested; remaining gaps are filename collisions, single-instance locking, and Docker hardening. Watches a folder for voice transcripts, enriches them with a local Ollama model, writes structured Markdown notes into an Obsidian-compatible vault. Local-only, no cloud, no API keys required.
+**Status:** `PROTOTYPE` — pipeline and deployment artifacts work and are tested; remaining gaps are live integration coverage and release automation. Watches a folder for voice transcripts, enriches them with a local Ollama model, writes structured Markdown notes into an Obsidian-compatible vault. Local-only, no cloud, no API keys required.
 
 ## Overview
 
@@ -60,7 +60,7 @@ Ollama location: `localhost:11434` (native), `172.17.0.1:11434` (Docker host), `
 
 ## Docker
 
-`cp docker/.env.example docker/.env`, fill `VAULT_PATH` (host path), `CURRENT_UID`/`CURRENT_GID` (`id -u`, `id -g`), then `make docker-build && make docker-up`. Only the vault is mounted (at `/vault`), so keep `INBOX_PATH=/vault/0_inbox`; use `OLLAMA_BASE_URL=http://172.17.0.1:11434` for host Ollama.
+`cp docker/.env.example docker/.env`, fill `VAULT_PATH` (host path), `CURRENT_UID`/`CURRENT_GID` (`id -u`, `id -g`), then `make docker-build && make docker-up`. Only the vault is mounted (at `/vault`), so keep `INBOX_PATH=/vault/0_inbox`; use `OLLAMA_BASE_URL=http://172.17.0.1:11434` for host Ollama. The image ships runtime deps only and has a healthcheck that verifies the vault mount is writable.
 
 ## Notes & Templates
 
@@ -70,20 +70,20 @@ Output is plain `.md` + YAML frontmatter — works with Obsidian, Logseq, Foam, 
 
 **Working**
 - Startup scan of inbox and `.retry/` queue; stability polling; duplicate-processing guard.
-- Ollama JSON enrichment with per-language title/summary and English tags.
-- REST and direct writes both target `OUTPUT_PATH`; retry on transport errors/timeouts/5xx.
-- Retry counter sidecars; `.failed/` quarantine; one-shot mode (`--once`, `make once`).
-- systemd unit, Docker env template, launchd install; 37 pytest tests + ruff CI.
+- Ollama JSON enrichment; REST and direct writes both target `OUTPUT_PATH`; retry on transport errors/timeouts/5xx.
+- Collision-safe filenames; single-instance lock; retry counter sidecars; `.failed/` quarantine.
+- One-shot mode (`--once`, `make once`) for cron/systemd timers.
+- systemd/Docker/launchd packaging; 41 pytest tests; CI on Python 3.11–3.14 (Ubuntu + macOS).
 
 **Broken / Incomplete**
-- Duplicate `date + title` filenames overwrite silently; no multi-process locking (two instances can race).
 - HTTP 4xx/invalid JSON still produce an unenriched note (logged, not retried by design).
-- Docker image ships dev deps and has no healthcheck; CI does not exercise a real Ollama/Obsidian.
-- Local Python 3.14 untested end-to-end (CI targets 3.11); no GitHub Release automation.
+- Docker healthcheck probes the vault mount only, not Ollama/Obsidian connectivity.
+- No live integration test against a real Ollama or Obsidian REST API (HTTP is mocked).
+- Release creation is manual; no tag-driven automation.
 
 **Next Steps**
-1. Add filename collision handling (suffix or slug/ID) and a single-instance guard.
-2. Add Docker healthcheck and split runtime/dev requirements for a slimmer image.
-3. Run tests on Python 3.11–3.14 and publish releases from CI.
+1. Add an opt-in live integration test (real Ollama + Obsidian REST) in CI.
+2. Automate releases on tag push (notes from `CHANGELOG.md`, attach artifacts).
+3. Consider `--dry-run` and structured logs/metrics for observability.
 
 License: MIT (see `LICENSE`).

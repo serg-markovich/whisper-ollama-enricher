@@ -1,9 +1,6 @@
-# Runtime + dev dependencies, pinned to the versions covered by CI.
-# Rationale: single-user local app; reproducible installs matter more than
-# floating minors. Bump together with a test run on Python 3.11.
+# Runtime dependencies only (used by Docker and the installed service).
+# Dev/test tooling lives in requirements-dev.txt. Bump together with CI.
 httpx==0.28.1
 pydantic==2.14.4
 python-dotenv==1.2.4
 watchdog==7.1.1
-pytest==9.2.0
-ruff==0.17.6

@@ -94,3 +94,17 @@ def test_write_note_falls_back_when_output_outside_vault(tmp_path):
 
     assert dest == out / _filename(_ctx())
     assert dest.exists()
+
+
+def test_write_note_does_not_overwrite_existing_note(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    existing = out / _filename(_ctx())
+    existing.write_text("existing", encoding="utf-8")
+
+    with patch("src.writer.OUTPUT_PATH", out), patch("src.writer.OBSIDIAN_API_KEY", ""):
+        dest = write_note(_ctx())
+
+    assert dest.name == _filename(_ctx()).replace(".md", " (2).md")
+    assert existing.read_text(encoding="utf-8") == "existing"
+    assert dest.read_text(encoding="utf-8").startswith("---")

@@ -99,6 +99,8 @@ Obsidian graph linking, where consistent language matters.
 | Ollama returns invalid JSON | caught by `except Exception` → note written without enrichment |
 | Obsidian REST API unavailable / `OUTPUT_PATH` outside vault | falls back to direct file write |
 | Output path does not exist | `OUTPUT_PATH.mkdir(parents=True, exist_ok=True)` |
+| Note with same date + title already exists | new file gets a ` (2)`, ` (3)`, ... suffix; existing note untouched |
+| Second service instance / overlapping cron run | `flock` on `INBOX_PATH/.enricher.lock` → second process exits with a FATAL message |
 | Source file is a regular note, not whisper JSON | skipped silently at DEBUG level |
 
 ## Module map
@@ -107,7 +109,8 @@ Obsidian graph linking, where consistent language matters.
 src/
 ├── config.py     env vars, fail-fast _require(), CONFIG_DIR export
 ├── models.py     WhisperOutput, OllamaEnrichment, NoteContext (Pydantic)
+├── lock.py       single-instance flock helper
 ├── watcher.py    watchdog observer, JSON filter, pipeline orchestration
-├── enricher.py   Ollama HTTP call, prompt, fallback
-└── writer.py     template engine, REST API write, direct file fallback
+├── enricher.py   Ollama HTTP call, prompt, retry/permanent error split
+└── writer.py     template engine, unique filenames, REST API write, direct fallback
 ```

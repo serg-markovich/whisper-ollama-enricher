@@ -9,6 +9,7 @@ __pycache__/
 .retry/
 *.retry
 .failed/
+.enricher.lock
 *.log
 .DS_Store
 .idea/
