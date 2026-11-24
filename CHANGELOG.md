@@ -7,16 +7,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - `--once` / `make once`: process inbox and retry queue once, then exit (cron/timer use)
-- Real pipeline tests exercising `run()`, `process_once()`, `_retry_pass()`, `_retry_worker()`
+- Real pipeline tests exercising `run()`, `process_once()`, `_retry_pass()`, `_retry_worker()` and the CLI
+- `ruff.toml` lint baseline — `make lint` stable across Ruff releases
+- CLI `--help` works without a configured `.env`
 
 ### Fixed
 - Empty `systemd/whisper-ollama-enricher.service` — Linux install now produces a working unit
-- Empty `docker/.env.example` — Docker quick start is usable again
+- Empty `docker/.env.example` — Docker quick start is usable again (vault-only mount documented)
 - launchd plist name now matches the Makefile (`launchd/whisper-ollama-enricher.plist`);
   `__CONFIG_DIR__` is substituted during install; `RunAtLoad` enabled
 - Startup scan snapshots `.retry/` before processing the inbox — one outage no longer
   consumes two retry attempts in a single scan
 - Added `LICENSE` (MIT), `.dockerignore`; `.gitignore` covers logs, `.DS_Store`, IDE folders
+- Docs synced: README status/Docker/one-shot, `docs/MACOS.md` (no manual placeholder step),
+  `AGENTS.md`/`CONTEXT.md` refreshed
 
 ## [0.4.0] - 2026-04-08
 

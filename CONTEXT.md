@@ -30,7 +30,7 @@
 - Obsidian Local REST API (optional; `OBSIDIAN_REST_URL`, `OBSIDIAN_API_KEY`).
 - Input producer: `local-whisper-obsidian` JSON files.
 - Env vars read by `src/config.py`: `INBOX_PATH`, `VAULT_PATH`, `OUTPUT_PATH`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_TIMEOUT`, `RETRY_INTERVAL`, `RETRY_MAX_ATTEMPTS`, `OLLAMA_SYSTEM_PROMPT`, `OBSIDIAN_REST_URL`, `OBSIDIAN_API_KEY`, `LOG_LEVEL`.
-- Docker-only vars (compose): `VAULT_PATH`, `CURRENT_UID`, `CURRENT_GID`; `docker/.env.example` is empty.
+- Docker-only vars (compose): `VAULT_PATH`, `CURRENT_UID`, `CURRENT_GID`; template in `docker/.env.example` (vault mounted at `/vault`, inbox must live inside it).
 - No database, no cloud services, no auth beyond optional Obsidian bearer token.
 
 ## Tech Debt & Risks

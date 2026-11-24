@@ -1,6 +1,6 @@
 # whisper-ollama-enricher
 
-**Status:** `PROTOTYPE` — core watcher→enrich→write pipeline works and is unit-tested; packaged deployment (systemd unit, Docker env) is incomplete. Watches a folder for voice transcripts, enriches them with a local Ollama model, writes structured Markdown notes into an Obsidian-compatible vault. Local-only, no cloud, no API keys required.
+**Status:** `PROTOTYPE` — pipeline and deployment artifacts work and are tested; remaining gaps are REST output path, retry-on-timeout semantics, and dependency pinning. Watches a folder for voice transcripts, enriches them with a local Ollama model, writes structured Markdown notes into an Obsidian-compatible vault. Local-only, no cloud, no API keys required.
 
 ## Overview
 
@@ -60,7 +60,7 @@ Ollama location: `localhost:11434` (native), `172.17.0.1:11434` (Docker host), `
 
 ## Docker
 
-`cp docker/.env.example docker/.env` (file is currently EMPTY — add vars manually), then `make docker-build && make docker-up`. `docker/.env` must define `VAULT_PATH` (host path), `OLLAMA_BASE_URL` (`http://172.17.0.1:11434` for host Ollama), `CURRENT_UID`, `CURRENT_GID` (from `id -u`, `id -g`).
+`cp docker/.env.example docker/.env`, fill `VAULT_PATH` (host path), `CURRENT_UID`/`CURRENT_GID` (`id -u`, `id -g`), then `make docker-build && make docker-up`. Only the vault is mounted (at `/vault`), so keep `INBOX_PATH=/vault/0_inbox`; use `OLLAMA_BASE_URL=http://172.17.0.1:11434` for host Ollama.
 
 ## Notes & Templates
 
