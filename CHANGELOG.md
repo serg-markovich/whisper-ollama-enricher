@@ -1,3 +1,23 @@
+# Changelog
+
+All notable changes documented here.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [0.5.0] - 2026-11-24
+
+### Added
+- `--once` / `make once`: process inbox and retry queue once, then exit (cron/timer use)
+- Real pipeline tests exercising `run()`, `process_once()`, `_retry_pass()`, `_retry_worker()`
+
+### Fixed
+- Empty `systemd/whisper-ollama-enricher.service` — Linux install now produces a working unit
+- Empty `docker/.env.example` — Docker quick start is usable again
+- launchd plist name now matches the Makefile (`launchd/whisper-ollama-enricher.plist`);
+  `__CONFIG_DIR__` is substituted during install; `RunAtLoad` enabled
+- Startup scan snapshots `.retry/` before processing the inbox — one outage no longer
+  consumes two retry attempts in a single scan
+- Added `LICENSE` (MIT), `.dockerignore`; `.gitignore` covers logs, `.DS_Store`, IDE folders
+
 ## [0.4.0] - 2026-04-08
 
 ### Added
@@ -12,11 +32,6 @@
 - `docker/.env.example`: typo `0inbox` → `0_inbox`, added missing env vars
 - `src/writer.py`: removed unnecessary `verify=False` in Obsidian REST client
 - Retry counter sidecar stored in `.retry/` by filename, survives file moves
-
-# Changelog
-
-All notable changes documented here.
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.3.0] - 2026-03-15
 

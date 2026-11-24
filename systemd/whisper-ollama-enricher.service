@@ -1,0 +1,17 @@
+[Unit]
+Description=Whisper transcript enricher (Ollama → Markdown notes)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.config/whisper-ollama-enricher/.env
+WorkingDirectory=__PROJECT_DIR__
+ExecStart=__VENV__/bin/python __PROJECT_DIR__/bin/run.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

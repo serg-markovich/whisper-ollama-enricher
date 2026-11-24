@@ -25,7 +25,7 @@
     <string>/tmp/whisper-ollama-enricher.err</string>
 
     <key>RunAtLoad</key>
-    <false/>
+    <true/>
 
     <key>KeepAlive</key>
     <true/>

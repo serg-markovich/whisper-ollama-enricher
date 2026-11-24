@@ -9,7 +9,7 @@ SERVICE    := $(PROJECT).service
 PLIST      := $(HOME)/Library/LaunchAgents/$(PROJECT).plist
 UNAME      := $(shell uname)
 
-.PHONY: install start stop restart status logs test lint clean \
+.PHONY: install start stop restart status logs once test lint verify clean \
         docker-build docker-up docker-down docker-logs
 
 install:
@@ -22,7 +22,7 @@ install:
 	$(PIP) install -r requirements.txt -q
 ifeq ($(UNAME), Darwin)
 	@mkdir -p $(HOME)/Library/LaunchAgents
-	@sed "s|__VENV__|$(VENV)|g; s|__PROJECT_DIR__|$(PWD)|g" \
+	@sed "s|__VENV__|$(VENV)|g; s|__PROJECT_DIR__|$(PWD)|g; s|__CONFIG_DIR__|$(CONFIG_DIR)|g" \
 		launchd/$(PROJECT).plist > $(PLIST)
 	@echo "✓ launchd plist installed: $(PLIST)"
 else
@@ -72,6 +72,9 @@ ifeq ($(UNAME), Darwin)
 else
 	journalctl --user -u $(SERVICE) -f
 endif
+
+once:
+	$(PYTHON) bin/run.py --once
 
 test:
 	$(VENV)/bin/pytest tests/ -v

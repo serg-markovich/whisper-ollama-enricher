@@ -1,175 +1,88 @@
 # whisper-ollama-enricher
 
-Watches a folder for voice transcripts, enriches them via local Ollama,
-writes structured Markdown notes.
+**Status:** `PROTOTYPE` — core watcher→enrich→write pipeline works and is unit-tested; packaged deployment (systemd unit, Docker env) is incomplete. Watches a folder for voice transcripts, enriches them with a local Ollama model, writes structured Markdown notes into an Obsidian-compatible vault. Local-only, no cloud, no API keys required.
 
-No cloud. No API keys. Runs on CPU.
+## Overview
 
-![CI](https://github.com/serg-markovich/whisper-ollama-enricher/actions/workflows/ci.yml/badge.svg)
-![Python](https://img.shields.io/badge/python-3.11-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-
-> **Platform support:** Linux (systemd) and macOS (launchd).
-> Docker deployment works on any platform.
-> 🍎 **macOS users:** see [docs/MACOS.md](docs/MACOS.md) for setup instructions.
-
----
+- Detects whisper JSON in `.md` files by content (`local-whisper-obsidian` output), not by filename.
+- Ollama produces `title`, `summary`, `tags` (English), `action_items` (transcript language).
+- Renders Markdown + YAML frontmatter via Obsidian REST API or direct file write fallback.
+- Unreachable Ollama → `.retry/` (retried every `RETRY_INTERVAL`s) → `.failed/` after `RETRY_MAX_ATTEMPTS`.
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/serg-markovich/whisper-ollama-enricher
-cd whisper-ollama-enricher
+git clone https://github.com/serg-markovich/whisper-ollama-enricher && cd whisper-ollama-enricher
 make install
-nano ~/.config/whisper-ollama-enricher/.env
-make start
-make logs
+nano ~/.config/whisper-ollama-enricher/.env   # set INBOX_PATH, VAULT_PATH
+make start && make logs
 ```
 
-## How it works
+Manual/one-shot run (cron, timer, or debug):
 
-```
-vault/0_inbox/*.md   ← JSON transcript from local-whisper-obsidian
-        │
-  Watcher            watchdog, non-recursive, skips non-whisper files
-        │
-  Enricher           Ollama → title, summary, tags, action_items
-        │
-  Writer      ──►    Obsidian REST API :27124
-              └─►    Direct file write → OUTPUT_PATH  (fallback)
-        │
-  source .md deleted after successful write
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+INBOX_PATH=/path/inbox VAULT_PATH=/path/vault .venv/bin/python bin/run.py   # add --once to exit after one scan
 ```
 
-If Ollama is unreachable, the file is moved to .retry/ queue
-and reprocessed automatically when the service recovers. No data is lost.
-
-## System Requirements
-
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| Python    | 3.11+   | 3.11+       |
-| RAM       | 500 MB  | 1 GB        |
-| OS        | Ubuntu 22.04+ / macOS 13+ | Ubuntu 24.04 |
-| Ollama    | any model ≥ 1B | mistral (4.1 GB) |
-| Disk      | 100 MB + model size | — |
-
-> **Minimum viable setup:** `ollama run gemma3:1b` — runs on 4 GB RAM total,
-> quality is lower but usable for short notes.
-
-## Requirements
-
-- Python 3.11+
-- [Ollama](https://ollama.com) running locally — any setup works:
-  - native install (`ollama serve`)
-  - via [openwebui-systemd-stack](https://github.com/serg-markovich/openwebui-systemd-stack)
-  - via Docker on macOS or NAS
-- [local-whisper-obsidian](https://github.com/serg-markovich/local-whisper-obsidian)
-  — recommended source of input transcripts
-- Obsidian [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api)
-  — optional, falls back to direct file write
+Requires Python 3.11+ and Ollama locally (`gemma3:1b` minimum, `mistral` recommended).
 
 ## Configuration
 
-All settings in `~/.config/whisper-ollama-enricher/.env`:
+File: `~/.config/whisper-ollama-enricher/.env` (see `.env.example`).
 
-| Variable            | Default                  | Description                            |
-|---------------------|--------------------------|----------------------------------------|
-| `INBOX_PATH`        | —                        | Folder to watch (required)             |
-| `VAULT_PATH`        | —                        | Obsidian vault root (required)         |
-| `OUTPUT_PATH`       | `$VAULT_PATH/1_enriched` | Where to write enriched notes          |
-| `OLLAMA_BASE_URL`   | `http://localhost:11434` | Ollama endpoint                        |
-| `OLLAMA_MODEL`      | `mistral`                | Model used for enrichment              |
-| `OLLAMA_TIMEOUT`    | `60`                     | Seconds before Ollama call times out   |
-| `OBSIDIAN_REST_URL` | `http://127.0.0.1:27124` | Obsidian Local REST API URL            |
-| `OBSIDIAN_API_KEY`  | empty                    | API key — leave empty for direct write |
-| `LOG_LEVEL`         | `INFO`                   | Logging verbosity                      |
+| Var | Default | Description |
+|---|---|---|
+| `INBOX_PATH` | — (required) | Watched folder for transcript `.md` |
+| `VAULT_PATH` | — (required) | Obsidian vault root |
+| `OUTPUT_PATH` | `$VAULT_PATH/1_enriched` | Direct-write output folder |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama endpoint |
+| `OLLAMA_MODEL` | `mistral` | Enrichment model |
+| `OLLAMA_TIMEOUT` | `60` | Request timeout (seconds) |
+| `OLLAMA_SYSTEM_PROMPT` | empty | Custom prompt: file path or inline string |
+| `RETRY_INTERVAL` | `30` | Retry scan interval (seconds) |
+| `RETRY_MAX_ATTEMPTS` | `5` | Failures before moving to `.failed/` |
+| `OBSIDIAN_REST_URL` | `http://127.0.0.1:27124` | Local REST API base |
+| `OBSIDIAN_API_KEY` | empty | Empty = direct file write |
+| `LOG_LEVEL` | `INFO` | `DEBUG`/`INFO`/`WARNING`/`ERROR` |
 
-### Ollama location examples
-
-```bash
-OLLAMA_BASE_URL=http://localhost:11434      # native on same host
-OLLAMA_BASE_URL=http://172.17.0.1:11434    # Docker on same host
-OLLAMA_BASE_URL=http://192.168.1.50:11434  # another machine in LAN
-```
-
-## Note templates
-
-Output format is fully customizable. The default template is built into the code.
-
-To override:
-```bash
-nano ~/.config/whisper-ollama-enricher/note_template.md
-make restart
-```
-
-See [docs/TEMPLATES.md](docs/TEMPLATES.md) for available placeholders and
-ready-made templates (Default, Zettelkasten, GTD, Minimal).
+Ollama location: `localhost:11434` (native), `172.17.0.1:11434` (Docker host), `192.168.x.x:11434` (LAN).
 
 ## Commands
 
-| Command            | Description                              |
-|--------------------|------------------------------------------|
-| `make install`     | venv + systemd (Linux) / launchd (macOS) |
-| `make start`       | start service                            |
-| `make stop`        | stop service                             |
-| `make restart`     | restart after config changes             |
-| `make status`      | service status                           |
-| `make logs`        | live logs                                |
-| `make test`        | run tests                                |
-| `make lint`        | ruff check                               |
-| `make docker-up`   | start via docker compose                 |
-| `make docker-down` | stop docker compose                      |
+| Command | Action |
+|---|---|
+| `make install` | venv + systemd (Linux) / launchd (macOS) |
+| `make start` / `stop` / `restart` | service control |
+| `make status` / `logs` | state / live logs |
+| `make once` / `test` / `lint` | one-shot scan / pytest / ruff |
+| `make docker-build` / `up` / `down` / `logs` | Docker stack |
 
-## Docker (NAS / headless)
+## Docker
 
-```bash
-cp docker/.env.example docker/.env
-nano docker/.env
-make docker-build
-make docker-up
-make docker-logs
-```
+`cp docker/.env.example docker/.env` (file is currently EMPTY — add vars manually), then `make docker-build && make docker-up`. `docker/.env` must define `VAULT_PATH` (host path), `OLLAMA_BASE_URL` (`http://172.17.0.1:11434` for host Ollama), `CURRENT_UID`, `CURRENT_GID` (from `id -u`, `id -g`).
 
-**`docker/.env` configuration:**
+## Notes & Templates
 
-| Variable          | Default                    | Description                    |
-|-------------------|----------------------------|--------------------------------|
-| `VAULT_PATH`      | —                          | Absolute path to vault on host |
-| `OLLAMA_BASE_URL` | `http://172.17.0.1:11434`  | Ollama on host                 |
-| `CURRENT_UID`     | —                          | Host user ID — run `id -u`     |
-| `CURRENT_GID`     | —                          | Host group ID — run `id -g`    |
+Output is plain `.md` + YAML frontmatter — works with Obsidian, Logseq, Foam, Dendron, Zettlr, Joplin. Override the built-in template at `~/.config/whisper-ollama-enricher/note_template.md`, then `make restart`. Placeholders: `docs/TEMPLATES.md`. Architecture and failure modes: `docs/ARCHITECTURE.md`.
 
-> **Why CURRENT_UID/GID?** Without this, enriched `.md` files are created
-> as `root:root` inside the mounted volume and Obsidian cannot read them.
-> Run `id -u && id -g` on your host to get the correct values.
+## Status & Roadmap
 
-## PKM Compatibility
+**Working**
+- Startup scan of inbox and `.retry/` queue; stability polling; duplicate-processing guard.
+- Ollama JSON enrichment with per-language title/summary and English tags.
+- Direct file write fallback; retry counter sidecars; `.failed/` quarantine.
+- One-shot mode (`--once`, `make once`) for cron/systemd timers.
+- systemd unit, Docker env template, launchd install; 30 pytest tests + ruff CI.
 
-Output is plain `.md` with YAML frontmatter — works with any
-Markdown-based knowledge tool: **Obsidian, Logseq, Foam, Dendron, Zettlr, Joplin**.
+**Broken / Incomplete**
+- Obsidian REST mode writes to vault root, ignoring `OUTPUT_PATH`; unenriched notes written on non-connect Ollama errors.
+- Non-connect Ollama failures (timeout/5xx/invalid JSON) are not retried; duplicate `date + title` filenames overwrite silently.
+- Dependencies unpinned, no lockfile; no multi-process locking; local Python 3.14 untested (CI targets 3.11).
 
-No vendor lock-in. Point `OUTPUT_PATH` at any folder your PKM tool watches.
+**Next Steps**
+1. Honor `OUTPUT_PATH` in REST mode and add filename collision handling (needs a product decision).
+2. Distinguish retryable Ollama errors (timeout/5xx) from invalid payloads.
+3. Pin dependencies + lockfile; run tests on Python 3.11–3.14.
 
-## My setup
-
-- Hardware: HP EliteBook 845 G8, Ubuntu 24.04
-- Vault: `~/obsidian/privat/`
-- Inbox: `0_inbox/` — produced by local-whisper-obsidian
-- Output: `0_inbox/records_transcribed/`
-- Model: `mistral`
-
-## Eigenstack
-
-This project is built around the [eigenstack](https://github.com/serg-markovich/eigenstack)
-philosophy — privacy-first, local-first infrastructure where every service
-runs on your own hardware, no cloud dependencies, no vendor lock-in.
-
-**Related projects:**
-- [eigenstack](https://github.com/serg-markovich/eigenstack) — architecture overview
-- [local-whisper-obsidian](https://github.com/serg-markovich/local-whisper-obsidian) — stage 1: voice transcription
-- [openwebui-systemd-stack](https://github.com/serg-markovich/openwebui-systemd-stack) — Ollama + Open WebUI on Linux
-
-## License
-
-MIT
+License: MIT (see `LICENSE`).

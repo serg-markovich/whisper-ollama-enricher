@@ -1,0 +1,7 @@
+# Project lint baseline: intentionally the long-standing Ruff defaults.
+# Keeps `make lint` / CI stable across Ruff releases.
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E4", "E7", "E9", "F"]

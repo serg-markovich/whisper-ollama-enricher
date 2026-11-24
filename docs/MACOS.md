@@ -22,29 +22,11 @@ make start
 make logs
 ```
 
-## One manual step after make install
+## Placeholders resolved automatically
 
-The launchd plist needs your actual config path. Open the installed plist:
-
-```bash
-nano ~/Library/LaunchAgents/whisper-ollama-enricher.plist
-```
-
-Replace `__CONFIG_DIR__` with your actual config directory:
-
-```xml
-<!-- change this: -->
-<string>__CONFIG_DIR__/.env</string>
-
-<!-- to this: -->
-<string>/Users/YOUR_USERNAME/.config/whisper-ollama-enricher/.env</string>
-```
-
-Then reload:
-
-```bash
-make restart
-```
+`make install` fills `__VENV__`, `__PROJECT_DIR__` and `__CONFIG_DIR__` in the installed
+plist (`~/Library/LaunchAgents/whisper-ollama-enricher.plist`). No manual editing is required;
+`make restart` reloads the service after config changes.
 
 ## Configuration
 

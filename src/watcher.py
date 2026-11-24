@@ -115,19 +115,23 @@ def _process(path: Path) -> None:
         _PROCESSING.discard(key)
 
 
+def _retry_pass() -> None:
+    if not RETRY_PATH.exists():
+        return
+    queued = list(RETRY_PATH.glob("*.md"))
+    if not queued:
+        return
+    log.info("Retry queue: %d file(s) pending", len(queued))
+    for f in queued:
+        dest = INBOX_PATH / f.name
+        shutil.move(str(f), dest)
+        _process(dest)
+
+
 def _retry_worker() -> None:
     while True:
         time.sleep(RETRY_INTERVAL)
-        if not RETRY_PATH.exists():
-            continue
-        queued = list(RETRY_PATH.glob("*.md"))
-        if not queued:
-            continue
-        log.info("Retry queue: %d file(s) pending", len(queued))
-        for f in queued:
-            dest = INBOX_PATH / f.name
-            shutil.move(str(f), dest)
-            _process(dest)
+        _retry_pass()
 
 
 class _InboxHandler(FileSystemEventHandler):
@@ -137,24 +141,40 @@ class _InboxHandler(FileSystemEventHandler):
             _process(Path(event.src_path))
 
 
-def run() -> None:
-    if not INBOX_PATH.exists():
-        raise SystemExit(f"INBOX_PATH does not exist: {INBOX_PATH}")
-
+def _startup_scan() -> None:
+    # Snapshot the retry queue first: a file queued while processing the inbox
+    # must not be retried again in the same scan (it would burn two attempts
+    # for a single outage).
+    queued = list(RETRY_PATH.glob("*.md")) if RETRY_PATH.exists() else []
     existing = list(INBOX_PATH.glob("*.md"))
+
     if existing:
         log.info("Startup scan: %d file(s) in inbox", len(existing))
         for f in existing:
             _process(f)
 
-    if RETRY_PATH.exists():
-        queued = list(RETRY_PATH.glob("*.md"))
-        if queued:
-            log.info("Startup scan: %d file(s) in retry queue", len(queued))
-            for f in queued:
-                dest = INBOX_PATH / f.name
-                shutil.move(str(f), dest)
-                _process(dest)
+    if queued:
+        log.info("Startup scan: %d file(s) in retry queue", len(queued))
+        for f in queued:
+            if not f.exists():
+                continue
+            dest = INBOX_PATH / f.name
+            shutil.move(str(f), dest)
+            _process(dest)
+
+
+def process_once() -> None:
+    """Process inbox and retry queue once, then return (no watcher)."""
+    if not INBOX_PATH.exists():
+        raise SystemExit(f"INBOX_PATH does not exist: {INBOX_PATH}")
+    _startup_scan()
+
+
+def run() -> None:
+    if not INBOX_PATH.exists():
+        raise SystemExit(f"INBOX_PATH does not exist: {INBOX_PATH}")
+
+    _startup_scan()
 
     log.info("Watching %s ...", INBOX_PATH)
 
